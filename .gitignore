@@ -4,7 +4,10 @@
 *.tmp
 *~
 
+test
 raidsim
 run-tests.csh
 tags
+
+myvirtualdisk-*
 
