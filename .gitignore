@@ -1,0 +1,10 @@
+*.o
+*.orig
+*.swp
+*.tmp
+*~
+
+raidsim
+run-tests.csh
+tags
+
