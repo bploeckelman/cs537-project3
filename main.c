@@ -173,6 +173,35 @@ void printCommand() {
 }
 
 
+// Process the current command ------------------------------------------------
+int processCommand() {
+    switch (cmd.cmd) {
+        case INVALID:
+            fprintf(stderr, "Warning: unable to process invalid command\n");
+        case READ:
+            // TODO
+            break;
+        case WRITE:
+            // TODO
+            break;
+        case FAIL:
+            if (disk_array_fail_disk(disk_array, cmd.disk) == -1) {
+                fprintf(stderr, "Problem failing disk #%d\n", cmd.disk);
+            }
+            break;
+        case RECOVER:
+            if (disk_array_recover_disk(disk_array, cmd.disk) == -1) {
+                fprintf(stderr, "Problem recovering disk #%d\n", cmd.disk);
+            }
+            break;
+        case END:
+            return 1;
+    }
+
+    return 0;
+}
+
+
 // Entry point ----------------------------------------------------------------
 int main( int argc, char *argv[] )
 {
@@ -211,6 +240,10 @@ int main( int argc, char *argv[] )
 #ifdef DEBUG
         printCommand();
 #endif
+
+        if (processCommand() != 0) {
+            break;
+        }
 
         printf("Enter command [ctrl-d to quit]: ");
     }
