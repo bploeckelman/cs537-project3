@@ -23,5 +23,5 @@ test.o: test.c
 	$(CC) $(FLAGS) test.c -o test.o
 
 clean:
-	rm -f *.o raidsim test myvirtualdisk-*
+	rm -f *.o raidsim test myvirtualdisk-* disk-array-*
 

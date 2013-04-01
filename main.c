@@ -6,7 +6,13 @@ Main program for CS537 - Project 3 - RAID
 #include <stdlib.h>
 #include <string.h>
 
+#include "disk-array.h"
+
 #define DEBUG
+
+
+disk_array_t disk_array = NULL;
+
 
 // Program arguments ----------------------------------------------------------
 struct args {
@@ -18,6 +24,19 @@ struct args {
 };
 struct args args;
 int verbose = 0;
+
+
+// Command values -------------------------------------------------------------
+typedef enum { INVALID, READ, WRITE, FAIL, RECOVER, END } ECommandType;
+struct command {
+    ECommandType cmd;
+    int lba;
+    int size;
+    int value;
+    int disk;
+};
+struct command cmd;
+
 
 // Note: this could be safer by using strol or bsd strtonum instead of atoi...
 // but that seems excessive for a class project
@@ -64,24 +83,140 @@ int parseCmdLine(int argc, char *argv[]) {
     if (args.size < 1) {
         return -1;
     }
-    // TODO : try to open file specified by args.trace return -1 if it can't be opened?
 
     return 0;
 }
 
 
+// Parse Command Line ---------------------------------------------------------
+void parseLine(char *line) {
+    // Clear command structure
+    memset(&cmd, 0, sizeof(struct command));
+    cmd.cmd = INVALID;
+    strtok(line, "\n"); // hack to remove newline
+
+    // Determine actual command
+    char *tok = strtok(line, " ");
+    if (strcmp(tok, "READ") == 0) {
+        cmd.cmd = READ;
+    } else if (strcmp(tok, "WRITE") == 0) {
+        cmd.cmd = WRITE;
+    } else if (strcmp(tok, "FAIL") == 0) {
+        cmd.cmd = FAIL;
+    } else if (strcmp(tok, "RECOVER") == 0) {
+        cmd.cmd = RECOVER;
+    } else if (strcmp(tok, "END") == 0) {
+        cmd.cmd = END;
+        return;
+    } else {
+        fprintf(stderr, "Invalid command: %s, expected READ, WRITE, FAIL, RECOVER, or END\n", tok);
+        return;
+    }
+
+    // Get and store next tokens...
+    int tokNum = 0;
+    while (tok != NULL) {
+        ++tokNum;
+        tok = strtok(NULL, " ");
+
+        // READ LBA SIZE
+        if (cmd.cmd == READ) {
+            switch (tokNum) {
+                case 1: cmd.lba  = atoi(tok); break;
+                case 2: cmd.size = atoi(tok); break;
+            }
+            if (tokNum == 2) break;
+        }
+        // WRITE LBA SIZE VALUE
+        else if (cmd.cmd == WRITE) {
+            switch (tokNum) {
+                case 1: cmd.lba   = atoi(tok); break;
+                case 2: cmd.size  = atoi(tok); break;
+                case 3: cmd.value = atoi(tok); break;
+            }
+            if (tokNum == 3) break;
+        }
+        // FAIL DISK
+        else if (cmd.cmd == FAIL) {
+            cmd.disk = atoi(tok);
+            break;
+        }
+        // RECOVER DISK
+        else if (cmd.cmd == RECOVER) {
+            cmd.disk = atoi(tok);
+            break;
+        }
+        // Shouldn't get here...
+        else {
+            printf("Warning: unknown command, shouldn't get here\n");
+            break;
+        }
+    } // end tokenizing
+}
+
+
+// Print command details (debug) ----------------------------------------------
+void printCommand() {
+    char *cmdString = "";
+    switch (cmd.cmd) {
+        case INVALID: cmdString = "Invalid"; break;
+        case READ:    cmdString = "Read";    break;
+        case WRITE:   cmdString = "Write";   break;
+        case FAIL:    cmdString = "Fail";    break;
+        case RECOVER: cmdString = "Recover"; break;
+        case END:     cmdString = "End";     break;
+        default:      cmdString = "Unknown"; break;
+    }
+
+    printf("Command:\n  cmd = %s\n  lba = %d\n  size = %d\n  value = %d\n  disk = %d\n",
+        cmdString, cmd.lba, cmd.size, cmd.value, cmd.disk);
+}
+
 
 // Entry point ----------------------------------------------------------------
 int main( int argc, char *argv[] )
 {
+    // Parse the command line arguments
 	if (parseCmdLine(argc, argv) == -1) {
 		fprintf(stderr, "Usage: %s <-level> [0|10|4|5] <-strip> n <-disks> n <-size> n <-trace> traceFile [-verbose]\n", argv[0]);
 		return 1;
     }
 
-    // TODO : run the simulation 
+#ifdef DEBUG
+    // Print parsed command line aguments
     printf("args: \n  level = %d\n  strip = %d\n  disks = %d\n  size = %d\n  trace = %s\n  verbose = %d\n",
         args.level, args.strip, args.disks, args.size, args.trace, verbose);
+#endif
+
+    // Create a new disk array
+    const char *diskArrayName = "disk-array";
+    disk_array = disk_array_create(diskArrayName, args.disks, args.size);
+    if (disk_array == NULL) {
+        fprintf(stderr, "Failed to create disk array.");
+        return 1;
+    }
+
+    // Setup trace file descriptor
+    FILE *fd = stdin;
+#ifndef DEBUG
+    // TODO : try to open args.traceFile and switch fd from stdin to that file
+#endif
+
+    // Parse each line from the input file
+    char line[1000];
+    printf("Enter command [ctrl-d to quit]: ");
+    while (fgets(line, 1000, fd) != NULL) {
+        parseLine(line);
+
+#ifdef DEBUG
+        printCommand();
+#endif
+
+        printf("Enter command [ctrl-d to quit]: ");
+    }
+
+    // Cleanup
+    disk_array_close(disk_array);
 
 	return 0;
 }
