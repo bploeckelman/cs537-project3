@@ -38,8 +38,83 @@ struct command {
 struct command cmd;
 
 
-// Note: this could be safer by using strol or bsd strtonum instead of atoi...
-// but that seems excessive for a class project
+// Function declarations ------------------------------------------------------
+int parseCmdLine(int argc, char *argv[]);
+void parseLine(char *line);
+void printCommand();
+int processCommand();
+
+
+// Entry point ----------------------------------------------------------------
+int main( int argc, char *argv[] )
+{
+    // Parse the command line arguments
+	if (parseCmdLine(argc, argv) == -1) {
+		fprintf(stderr, "Usage: %s <-level> [0|10|4|5] <-strip> n <-disks> n <-size> n <-trace> traceFile [-verbose]\n", argv[0]);
+		return 1;
+    }
+
+#ifdef DEBUG
+    // Print parsed command line aguments
+    printf("args: \n  level = %d\n  strip = %d\n  disks = %d\n  size = %d\n  trace = %s\n  verbose = %d\n",
+        args.level, args.strip, args.disks, args.size, args.trace, verbose);
+#endif
+
+    // Create a new disk array
+    const char *diskArrayName = "disk-array";
+    disk_array = disk_array_create(diskArrayName, args.disks, args.size);
+    if (disk_array == NULL) {
+        fprintf(stderr, "Failed to create disk array.");
+        return 1;
+    }
+
+    // Setup trace file descriptor
+    FILE *fd = stdin;
+#ifndef DEBUG
+    if (args.trace == NULL) {
+        fprintf(stderr, "Error: no trace file specified.\n");
+        return 1;
+    }
+    // Try to open args.traceFile, switching fd from stdin to that file
+    if ((fd = fopen(args.trace, "r")) == NULL) {
+        char errString[1024];
+        sprintf(errString, "Error: Unable to open trace file \"%s\"", args.trace);
+        perror(errString);
+        return 1;
+    }
+#endif
+
+    // Parse each line from the input file
+    char line[1000];
+    printf("Enter command [ctrl-d to quit]: ");
+    while (fgets(line, 1000, fd) != NULL) {
+        parseLine(line);
+
+#ifdef DEBUG
+        printCommand();
+#endif
+
+        if (processCommand() != 0) {
+            break;
+        }
+
+        printf("Enter command [ctrl-d to quit]: ");
+    }
+
+    // Print statistics
+    disk_array_print_stats(disk_array);
+
+    // Cleanup
+    disk_array_close(disk_array);
+
+	return 0;
+}
+
+
+// Parse Command Line Arguments -----------------------------------------------
+// Note: this could be safer by using strol or bsd strtonum instead of atoi,
+// but that seems excessive for a class project,  we could also use 
+// getopt_long_only() instead of this, but this gets the job done as well
 int parseCmdLine(int argc, char *argv[]) {
     // Validate number of arguments
     if (argc < 11 || argc > 12) {
@@ -199,71 +274,5 @@ int processCommand() {
     }
 
     return 0;
-}
-
-
-// Entry point ----------------------------------------------------------------
-int main( int argc, char *argv[] )
-{
-    // Parse the command line arguments
-	if (parseCmdLine(argc, argv) == -1) {
-		fprintf(stderr, "Usage: %s <-level> [0|10|4|5] <-strip> n <-disks> n <-size> n <-trace> traceFile [-verbose]\n", argv[0]);
-		return 1;
-    }
-
-#ifdef DEBUG
-    // Print parsed command line aguments
-    printf("args: \n  level = %d\n  strip = %d\n  disks = %d\n  size = %d\n  trace = %s\n  verbose = %d\n",
-        args.level, args.strip, args.disks, args.size, args.trace, verbose);
-#endif
-
-    // Create a new disk array
-    const char *diskArrayName = "disk-array";
-    disk_array = disk_array_create(diskArrayName, args.disks, args.size);
-    if (disk_array == NULL) {
-        fprintf(stderr, "Failed to create disk array.");
-        return 1;
-    }
-
-    // Setup trace file descriptor
-    FILE *fd = stdin;
-#ifndef DEBUG
-    if (args.trace == NULL) {
-        fprintf(stderr, "Error: no trace file specified.\n");
-        return 1;
-    }
-    // Try to open args.traceFile, switching fd from stdin to that file
-    if ((fd = fopen(args.trace, "r")) == NULL) {
-        char errString[1024];
-        sprintf(errString, "Error: Unable to open trace file \"%s\"", args.trace);
-        perror(errString);
-        return 1;
-    }
-#endif
-
-    // Parse each line from the input file
-    char line[1000];
-    printf("Enter command [ctrl-d to quit]: ");
-    while (fgets(line, 1000, fd) != NULL) {
-        parseLine(line);
-
-#ifdef DEBUG
-        printCommand();
-#endif
-
-        if (processCommand() != 0) {
-            break;
-        }
-
-        printf("Enter command [ctrl-d to quit]: ");
-    }
-
-    // Print statistics
-    disk_array_print_stats(disk_array);
-
-    // Cleanup
-    disk_array_close(disk_array);
-
-	return 0;
 }
 
