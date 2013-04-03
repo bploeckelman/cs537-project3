@@ -228,7 +228,17 @@ int main( int argc, char *argv[] )
     // Setup trace file descriptor
     FILE *fd = stdin;
 #ifndef DEBUG
-    // TODO : try to open args.traceFile and switch fd from stdin to that file
+    if (args.trace == NULL) {
+        fprintf(stderr, "Error: no trace file specified.\n");
+        return 1;
+    }
+    // Try to open args.traceFile, switching fd from stdin to that file
+    if ((fd = fopen(args.trace, "r")) == NULL) {
+        char errString[1024];
+        sprintf(errString, "Error: Unable to open trace file \"%s\"", args.trace);
+        perror(errString);
+        return 1;
+    }
 #endif
 
     // Parse each line from the input file
