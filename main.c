@@ -46,6 +46,7 @@ void printCommand();
 int processCommand();
 void readCommand();
 void writeCommand();
+void recoverCommand();
 
 
 // Entry point ----------------------------------------------------------------
@@ -209,7 +210,7 @@ void parseLine(char *line) {
             switch (tokNum) {
                 case 1: cmd.lba   = atoi(tok); break;
                 case 2: cmd.size  = atoi(tok); break;
-                case 3: memcpy(cmd.value, tok, 4); break;// = atoi(tok); break;
+                case 3: memcpy(cmd.value, tok, 4); break;
             }
             if (tokNum == 3) break;
         }
@@ -258,20 +259,15 @@ void printCommand() {
 int processCommand() {
     switch (cmd.cmd) {
         case INVALID: fprintf(stderr, "Warning: Invalid command\n"); break;
-        case READ:    readCommand();  break;
-        case WRITE:   writeCommand(); break;
+        case READ:    readCommand();    break;
+        case WRITE:   writeCommand();   break;
+        case RECOVER: recoverCommand(); break;
+        case END:     return 1;
         case FAIL:
             if (disk_array_fail_disk(disk_array, cmd.disk) == -1) {
                 fprintf(stderr, "Problem failing disk #%d\n", cmd.disk);
             }
             break;
-        case RECOVER:
-            // TODO have to attempt to recover data from other drives if possible
-            if (disk_array_recover_disk(disk_array, cmd.disk) == -1) {
-                fprintf(stderr, "Problem recovering disk #%d\n", cmd.disk);
-            }
-            break;
-        case END: return 1;
     }
 
     return 0;
@@ -295,11 +291,15 @@ void readRaid0() {
 
         char readBuffer[BLOCK_SIZE];
         if (disk_array_read(disk_array, disk, block, readBuffer) == -1) {
+#ifdef DEBUG
             fprintf(stderr, "Error: Failed to read block %d from disk %d\n", block, disk);
+#endif
+            // Note: apparently in this case we should just print ERROR instead of first 4 btyes
+            printf("ERROR ");
+        } else {
+            // Print first 4 bytes from block that was read 
+            printf("%c%c%c%c ", readBuffer[0], readBuffer[1], readBuffer[2], readBuffer[3]);
         }
-
-        // Print first 4 bytes from block that was read 
-        printf("%c%c%c%c ", readBuffer[0], readBuffer[1], readBuffer[2], readBuffer[3]);
         
         ++lba;
     }
@@ -400,6 +400,52 @@ void writeCommand() {
         case 4:  writeRaid4();  break;
         case 5:  writeRaid5();  break;
         default: fprintf(stderr, "Warning: attempted to write using invalid raid level\n");
+    }
+}
+
+
+// -----------------------------------------------------------------------------
+// RAID Recover functions ------------------------------------------------------
+// -----------------------------------------------------------------------------
+
+
+// Recover RAID 0 : striped data -----------------------------------------------
+void recoverRaid0() {
+    // uhh... can't really recover a failed disk's data in raid 0
+    printf("Error: cannot recover data from disk #%d in RAID 0 configuration\n", cmd.disk);
+}
+
+// Recover RAID 10 : striped and mirrored data ---------------------------------
+void recoverRaid10() {
+
+}
+
+// Recover RAID 4 : striped on disks 0..(n-1), parity on disk n ----------------
+void recoverRaid4() {
+
+}
+
+// Recover RAID 5 : striped, with parity on different disk for each stripe -----
+void recoverRaid5() {
+
+}
+
+
+// Recover command -------------------------------------------------------------
+void recoverCommand() {
+    if (cmd.cmd != RECOVER) return;
+
+    // Zero out the specified disk in preparation for recovery
+    if (disk_array_recover_disk(disk_array, cmd.disk) == -1) {
+        fprintf(stderr, "Problem recovering disk #%d\n", cmd.disk);
+    }
+
+    switch (args.level) {
+        case 0:  recoverRaid0();  break;
+        case 10: recoverRaid10(); break;
+        case 4:  recoverRaid4();  break;
+        case 5:  recoverRaid5();  break;
+        default: fprintf(stderr, "Warning: attempted to recover using invalid raid level\n");
     }
 }
 
