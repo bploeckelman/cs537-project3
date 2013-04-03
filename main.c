@@ -258,6 +258,9 @@ int main( int argc, char *argv[] )
         printf("Enter command [ctrl-d to quit]: ");
     }
 
+    // Print statistics
+    disk_array_print_stats(disk_array);
+
     // Cleanup
     disk_array_close(disk_array);
 
