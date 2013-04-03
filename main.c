@@ -6,6 +6,7 @@ Main program for CS537 - Project 3 - RAID
 #include <stdlib.h>
 #include <string.h>
 
+#include "disk.h"
 #include "disk-array.h"
 
 #define DEBUG
@@ -32,7 +33,7 @@ struct command {
     ECommandType cmd;
     int lba;
     int size;
-    int value;
+    char value[4];
     int disk;
 };
 struct command cmd;
@@ -55,12 +56,6 @@ int main( int argc, char *argv[] )
 		fprintf(stderr, "Usage: %s <-level> [0|10|4|5] <-strip> n <-disks> n <-size> n <-trace> traceFile [-verbose]\n", argv[0]);
 		return 1;
     }
-
-#ifdef DEBUG
-    // Print parsed command line aguments
-    printf("args: \n  level = %d\n  strip = %d\n  disks = %d\n  size = %d\n  trace = %s\n  verbose = %d\n",
-        args.level, args.strip, args.disks, args.size, args.trace, verbose);
-#endif
 
     // Create a new disk array
     const char *diskArrayName = "disk-array";
@@ -92,15 +87,13 @@ int main( int argc, char *argv[] )
     while (fgets(line, 1000, fd) != NULL) {
         parseLine(line);
 
-#ifdef DEBUG
-        printCommand();
-#endif
-
         if (processCommand() != 0) {
             break;
         }
 
+#ifdef DEBUG
         printf("Enter command [ctrl-d to quit]: ");
+#endif
     }
 
     // Print statistics
@@ -161,6 +154,13 @@ int parseCmdLine(int argc, char *argv[]) {
         return -1;
     }
 
+#ifdef DEBUG
+    // Print parsed command line aguments
+    printf("args: \n  level = %d\n  strip = %d\n  disks = %d\n  size = %d\n  trace = %s\n  verbose = %d\n",
+        args.level, args.strip, args.disks, args.size, args.trace, verbose);
+#endif
+
+
     return 0;
 }
 
@@ -209,7 +209,7 @@ void parseLine(char *line) {
             switch (tokNum) {
                 case 1: cmd.lba   = atoi(tok); break;
                 case 2: cmd.size  = atoi(tok); break;
-                case 3: cmd.value = atoi(tok); break;
+                case 3: memcpy(cmd.value, tok, 4); break;// = atoi(tok); break;
             }
             if (tokNum == 3) break;
         }
@@ -229,6 +229,10 @@ void parseLine(char *line) {
             break;
         }
     } // end tokenizing
+
+#ifdef DEBUG
+        printCommand();
+#endif
 }
 
 
@@ -245,8 +249,8 @@ void printCommand() {
         default:      cmdString = "Unknown"; break;
     }
 
-    printf("Command:\n  cmd = %s\n  lba = %d\n  size = %d\n  value = %d\n  disk = %d\n",
-        cmdString, cmd.lba, cmd.size, cmd.value, cmd.disk);
+    printf("Command:\n  cmd = %s\n  lba = %d\n  size = %d\n  value = %c%c%c%c\n  disk = %d\n",
+        cmdString, cmd.lba, cmd.size, cmd.value[0], cmd.value[1], cmd.value[2], cmd.value[3], cmd.disk);
 }
 
 
@@ -262,6 +266,7 @@ int processCommand() {
             }
             break;
         case RECOVER:
+            // TODO have to attempt to recover data from other drives if possible
             if (disk_array_recover_disk(disk_array, cmd.disk) == -1) {
                 fprintf(stderr, "Problem recovering disk #%d\n", cmd.disk);
             }
@@ -273,50 +278,128 @@ int processCommand() {
 }
 
 
-// Read command ---------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// RAID Read functions --------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+
+// Read RAID 0 : striped data -------------------------------------------------
+void readRaid0() {
+    int lba   = cmd.lba;
+    int size  = cmd.size;
+    int strip = args.strip;
+
+    while (size-- > 0) {
+        int disk  = (lba / strip) % args.disks;
+        int block = (lba % strip) + ((lba / strip) / args.disks) * strip;
+
+        char readBuffer[BLOCK_SIZE];
+        if (disk_array_read(disk_array, disk, block, readBuffer) == -1) {
+            fprintf(stderr, "Error: Failed to read block %d from disk %d\n", block, disk);
+        }
+
+        // Print first 4 bytes from block that was read 
+        printf("%c%c%c%c ", readBuffer[0], readBuffer[1], readBuffer[2], readBuffer[3]);
+        
+        ++lba;
+    }
+    puts("");
+}
+
+// Read RAID 10 : striped and mirrored data ------------------------------------
+void readRaid10() {
+    // TODO
+}
+
+// Read RAID 4 : striped on disks 0..(n-1), parity on disk n -------------------
+void readRaid4() {
+    // TODO
+}
+
+// Read RAID 5 : striped, with parity on different disk for each stripe --------
+void readRaid5() {
+    // TODO
+}
+
+
+// RAID Read Command -----------------------------------------------------------
 void readCommand() {
     if (cmd.cmd != READ) return;
 
     // READ LBA SIZE
-    if (args.level == 0) {
-        // Read: striped data
-        // TODO
-    } else if (args.level == 10) {
-        // Read: striped and mirrored data
-        // TODO
-    } else if (args.level == 4) {
-        // Read: striped data on disks 0..(n-1), parity on disk n
-        // TODO
-    } else if (args.level == 5) {
-        // Read: striped data, with parity on different disk for each stripe
-        // TODO
-    } else {
-        // Shouldn't get here...
-        fprintf(stderr, "Warning: attempted to read using invalid raid level\n");
+    switch (args.level) {
+        case 0:  readRaid0();  break;
+        case 10: readRaid10(); break;
+        case 4:  readRaid4();  break;
+        case 5:  readRaid5();  break;
+        default: fprintf(stderr, "Warning: attempted to read using invalid raid level\n");
     }
 }
 
 
-// Write command --------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// RAID Write functions -------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+
+// Write RAID 0 : striped data ------------------------------------------------
+void writeRaid0() {
+    int lba   = cmd.lba;
+    int size  = cmd.size;
+    int strip = args.strip;
+
+    while (size-- > 0) {
+        int disk  = (lba / strip) % args.disks;
+        int block = (lba % strip) + ((lba / strip) / args.disks) * strip;
+
+        // Fill write buffer with the repeated 4 byte pattern from value
+        char writeBuffer[BLOCK_SIZE];
+        memset(writeBuffer, 0, BLOCK_SIZE);
+        for (int i = 0; i < BLOCK_SIZE; ++i) {
+            writeBuffer[i] = cmd.value[i % 4];
+        }
+
+        if (disk_array_write(disk_array, disk, block, writeBuffer) == -1) {
+            fprintf(stderr, "Error: Failed to write block %d to disk %d\n", block, disk);
+        }
+
+#ifdef DEBUG
+        // Print first 4 bytes from block that was written 
+        printf("%c%c%c%c ", writeBuffer[0], writeBuffer[1], writeBuffer[2], writeBuffer[3]);
+#endif
+        
+        ++lba;
+    }
+    puts("");
+}
+
+// Write RAID 10 : striped and mirrored data -----------------------------------
+void writeRaid10() {
+    // TODO
+}
+
+// Write RAID 4 : striped on disks 0..(n-1), parity on disk n ------------------
+void writeRaid4() {
+    // TODO
+}
+
+// Write RAID 5 : striped, with parity on different disk for each stripe -------
+void writeRaid5() {
+    // TODO
+}
+
+
+// Write command ---------------------------------------------------------------
 void writeCommand() {
     if (cmd.cmd != WRITE) return;
 
     // WRITE LBA SIZE VALUE
-    if (args.level == 0) {
-        // Write: striped data
-        // TODO
-    } else if (args.level == 10) {
-        // Write: striped and mirrored data
-        // TODO
-    } else if (args.level == 4) {
-        // Write: striped data on disks 0..(n-1), parity on disk n
-        // TODO
-    } else if (args.level == 5) {
-        // Write: striped data, with parity on different disk for each stripe
-        // TODO
-    } else {
-        // Shouldn't get here...
-        fprintf(stderr, "Warning: attempted to write using invalid raid level\n");
+    switch (args.level) {
+        case 0:  writeRaid0();  break;
+        case 10: writeRaid10(); break;
+        case 4:  writeRaid4();  break;
+        case 5:  writeRaid5();  break;
+        default: fprintf(stderr, "Warning: attempted to write using invalid raid level\n");
     }
 }
 
