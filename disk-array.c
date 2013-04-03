@@ -37,7 +37,7 @@ disk_array_t disk_array_create( const char *filename,
     goto Cleanup;
   }
 
-  disk_array = malloc(sizeof(struct disk_array) + (disks) * sizeof(struct disk *));
+  disk_array = (disk_array_t) malloc(sizeof(struct disk_array) + (disks) * sizeof(struct disk *));
   if (disk_array == NULL) {
     goto Cleanup;
   }

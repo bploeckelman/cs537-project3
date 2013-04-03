@@ -41,6 +41,14 @@ struct disk * disk_open( const char *diskname, int nblocks )
 	d->block_size = BLOCK_SIZE;
 	d->nblocks = nblocks;
 
+	//
+	// Zero out the disk
+	//
+	if(ftruncate(d->fd,0)<0) {
+		close(d->fd);
+		free(d);
+		return 0;
+	}
 	if(ftruncate(d->fd,d->nblocks*d->block_size)<0) {
 		close(d->fd);
 		free(d);
@@ -62,7 +70,7 @@ void disk_write( struct disk *d, int block, const char *data )
 		fprintf(stderr,"disk_write: failed to write block #%d: %s\n",block,strerror(errno));
 		abort();
 	}
-	d->nreads++;
+	d->nwrites++;
 }
 
 void disk_read( struct disk *d, int block, char *data )
