@@ -43,6 +43,8 @@ int parseCmdLine(int argc, char *argv[]);
 void parseLine(char *line);
 void printCommand();
 int processCommand();
+void readCommand();
+void writeCommand();
 
 
 // Entry point ----------------------------------------------------------------
@@ -251,14 +253,9 @@ void printCommand() {
 // Process the current command ------------------------------------------------
 int processCommand() {
     switch (cmd.cmd) {
-        case INVALID:
-            fprintf(stderr, "Warning: unable to process invalid command\n");
-        case READ:
-            // TODO
-            break;
-        case WRITE:
-            // TODO
-            break;
+        case INVALID: fprintf(stderr, "Warning: Invalid command\n"); break;
+        case READ:    readCommand();  break;
+        case WRITE:   writeCommand(); break;
         case FAIL:
             if (disk_array_fail_disk(disk_array, cmd.disk) == -1) {
                 fprintf(stderr, "Problem failing disk #%d\n", cmd.disk);
@@ -269,10 +266,57 @@ int processCommand() {
                 fprintf(stderr, "Problem recovering disk #%d\n", cmd.disk);
             }
             break;
-        case END:
-            return 1;
+        case END: return 1;
     }
 
     return 0;
+}
+
+
+// Read command ---------------------------------------------------------------
+void readCommand() {
+    if (cmd.cmd != READ) return;
+
+    // READ LBA SIZE
+    if (args.level == 0) {
+        // Read: striped data
+        // TODO
+    } else if (args.level == 10) {
+        // Read: striped and mirrored data
+        // TODO
+    } else if (args.level == 4) {
+        // Read: striped data on disks 0..(n-1), parity on disk n
+        // TODO
+    } else if (args.level == 5) {
+        // Read: striped data, with parity on different disk for each stripe
+        // TODO
+    } else {
+        // Shouldn't get here...
+        fprintf(stderr, "Warning: attempted to read using invalid raid level\n");
+    }
+}
+
+
+// Write command --------------------------------------------------------------
+void writeCommand() {
+    if (cmd.cmd != WRITE) return;
+
+    // WRITE LBA SIZE VALUE
+    if (args.level == 0) {
+        // Write: striped data
+        // TODO
+    } else if (args.level == 10) {
+        // Write: striped and mirrored data
+        // TODO
+    } else if (args.level == 4) {
+        // Write: striped data on disks 0..(n-1), parity on disk n
+        // TODO
+    } else if (args.level == 5) {
+        // Write: striped data, with parity on different disk for each stripe
+        // TODO
+    } else {
+        // Shouldn't get here...
+        fprintf(stderr, "Warning: attempted to write using invalid raid level\n");
+    }
 }
 
