@@ -53,9 +53,9 @@ void recoverCommand();
 int main( int argc, char *argv[] )
 {
     // Parse the command line arguments
-	if (parseCmdLine(argc, argv) == -1) {
-		fprintf(stderr, "Usage: %s <-level> [0|10|4|5] <-strip> n <-disks> n <-size> n <-trace> traceFile [-verbose]\n", argv[0]);
-		return 1;
+    if (parseCmdLine(argc, argv) == -1) {
+        fprintf(stderr, "Usage: %s <-level> [0|10|4|5] <-strip> n <-disks> n <-size> n <-trace> traceFile [-verbose]\n", argv[0]);
+        return 1;
     }
 
     // Create a new disk array
@@ -83,15 +83,15 @@ int main( int argc, char *argv[] )
 #endif
 
     // Parse each line from the input file
-    char line[1000];
+#ifdef DEBUG
     printf("Enter command [ctrl-d to quit]: ");
+#endif
+    char line[1000];
     while (fgets(line, 1000, fd) != NULL) {
         parseLine(line);
-
         if (processCommand() != 0) {
             break;
         }
-
 #ifdef DEBUG
         printf("Enter command [ctrl-d to quit]: ");
 #endif
@@ -103,7 +103,7 @@ int main( int argc, char *argv[] )
     // Cleanup
     disk_array_close(disk_array);
 
-	return 0;
+    return 0;
 }
 
 
@@ -122,19 +122,12 @@ int parseCmdLine(int argc, char *argv[]) {
 
     // Parse arguments
     for (int i = 1; i < argc; ++i) {
-        if (strcmp(argv[i], "-level") == 0) {
-            args.level = atoi(argv[++i]);
-        } else if (strcmp(argv[i], "-strip") == 0) {
-            args.strip = atoi(argv[++i]);
-        } else if (strcmp(argv[i], "-disks") == 0) {
-            args.disks = atoi(argv[++i]);
-        } else if (strcmp(argv[i], "-size") == 0) {
-            args.size = atoi(argv[++i]);
-        } else if (strcmp(argv[i], "-trace") == 0) {
-            args.trace = argv[++i];
-        } else if (strcmp(argv[i], "-verbose") == 0) {
-            verbose = 1;
-        }
+             if (strcmp(argv[i], "-level")   == 0) args.level = atoi(argv[++i]);
+        else if (strcmp(argv[i], "-strip")   == 0) args.strip = atoi(argv[++i]);
+        else if (strcmp(argv[i], "-disks")   == 0) args.disks = atoi(argv[++i]);
+        else if (strcmp(argv[i], "-size")    == 0) args.size  = atoi(argv[++i]);
+        else if (strcmp(argv[i], "-trace")   == 0) args.trace = argv[++i];
+        else if (strcmp(argv[i], "-verbose") == 0) verbose = 1;
     }
 
     // Validate arguments
@@ -175,15 +168,11 @@ void parseLine(char *line) {
 
     // Determine actual command
     char *tok = strtok(line, " ");
-    if (strcmp(tok, "READ") == 0) {
-        cmd.cmd = READ;
-    } else if (strcmp(tok, "WRITE") == 0) {
-        cmd.cmd = WRITE;
-    } else if (strcmp(tok, "FAIL") == 0) {
-        cmd.cmd = FAIL;
-    } else if (strcmp(tok, "RECOVER") == 0) {
-        cmd.cmd = RECOVER;
-    } else if (strcmp(tok, "END") == 0) {
+         if (strcmp(tok, "READ")    == 0) cmd.cmd = READ;
+    else if (strcmp(tok, "WRITE")   == 0) cmd.cmd = WRITE;
+    else if (strcmp(tok, "FAIL")    == 0) cmd.cmd = FAIL;
+    else if (strcmp(tok, "RECOVER") == 0) cmd.cmd = RECOVER;
+    else if (strcmp(tok, "END")     == 0) {
         cmd.cmd = END;
         return;
     } else {
