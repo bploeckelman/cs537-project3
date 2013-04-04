@@ -300,7 +300,45 @@ void readRaid0() {
 
 // Read RAID 10 : striped and mirrored data ------------------------------------
 void readRaid10() {
-    // TODO
+    int lba = cmd.lba;
+    int blocksToRead = cmd.size;
+    int blocksPerStripe = args.strip;
+
+    while (blocksToRead-- > 0) {
+        int disk  = ((lba / blocksPerStripe) * 2) % args.disks;
+        int block = (lba % blocksPerStripe) + ((lba / blocksPerStripe) / (args.disks / 2)) * blocksPerStripe;
+        int mirror = disk + 1;
+
+        // Try to read from disk
+        int readSucceeded = 0;
+        char readBuffer[BLOCK_SIZE];
+        if (disk_array_read(disk_array, disk, block, readBuffer) == -1) {
+            //fprintf(stderr, "Error: Failed to read block %d from disk %d\n", block, disk);
+
+            // Try  to read from mirror
+            if (disk_array_read(disk_array, mirror, block, readBuffer) == -1) {
+                //fprintf(stderr, "Error: Failed to read block %d from disk %d\n", block, mirror);
+            } else {
+                readSucceeded = 1;
+            }
+        } else {
+            readSucceeded = 1;
+        }
+
+        if (readSucceeded) {
+            if (readBuffer[0] == 0) {
+                printf("0 ");
+            } else {
+                // Print first 4 bytes from block that was read
+                printf("%c%c%c%c ", readBuffer[0], readBuffer[1], readBuffer[2], readBuffer[3]);
+            }
+        } else {
+            // Print ERROR instead of first 4 bytes
+            printf("ERROR ");
+        }
+
+        ++lba;
+    }
 }
 
 // Read RAID 4 : striped on disks 0..(n-1), parity on disk n -------------------
@@ -370,7 +408,36 @@ void writeRaid0() {
 
 // Write RAID 10 : striped and mirrored data -----------------------------------
 void writeRaid10() {
-    // TODO
+    int lba = cmd.lba;
+    int blocksToWrite = cmd.size;
+    int blocksPerStripe = args.strip;
+
+    while (blocksToWrite-- > 0) {
+        int disk  = ((lba / blocksPerStripe) * 2) % args.disks;
+        int block = (lba % blocksPerStripe) + ((lba / blocksPerStripe) / (args.disks / 2)) * blocksPerStripe;
+        int mirror = disk + 1;
+
+        // Fill write buffer with the repeated 4 byte pattern from value
+        char writeBuffer[BLOCK_SIZE];
+        memset(writeBuffer, 0, BLOCK_SIZE);
+        for (int i = 0; i < BLOCK_SIZE; ++i) {
+            writeBuffer[i] = cmd.value[i % 4];
+        }
+
+        if (disk_array_write(disk_array, disk, block, writeBuffer) == -1) {
+            //fprintf(stderr, "Error: Failed to write block %d to disk %d\n", block, disk);
+        }
+        if (disk_array_write(disk_array, mirror, block, writeBuffer) == -1) {
+            //fprintf(stderr, "Error: Failed to write block %d to disk %d\n", block, mirror);
+        }
+
+#ifdef DEBUG
+        // Print first 4 bytes from block that was written
+        printf("%c%c%c%c ", writeBuffer[0], writeBuffer[1], writeBuffer[2], writeBuffer[3]);
+#endif
+
+        ++lba;
+    }
 }
 
 // Write RAID 4 : striped on disks 0..(n-1), parity on disk n ------------------
@@ -418,7 +485,30 @@ void recoverRaid0() {
 
 // Recover RAID 10 : striped and mirrored data ---------------------------------
 void recoverRaid10() {
+    // The mirror disk is either the next or previous disk in the array
+    int mirror = cmd.disk;
+    if (cmd.disk % 2 == 0) mirror += 1;
+    else                   mirror -= 1;
 
+    // Restore the specified disk with data from the mirror disk
+    char buffer[BLOCK_SIZE];
+    for (int block = 0; block < args.size; ++block)
+    {
+        if (disk_array_read(disk_array, mirror, block, buffer) == -1) {
+#ifdef DEBUG
+            fprintf(stderr, "Error: Failed to read block %d from disk %d to recover disk %d\n", block, mirror, cmd.disk);
+#endif
+            printf("ERROR ");
+            return;
+        }
+
+        if (disk_array_write(disk_array, cmd.disk, block, buffer) == -1) {
+#ifdef DEBUG
+            fprintf(stderr, "Error: Failed to write block %d to disk %d from recovery disk %d\n", block, cmd.disk, mirror);
+#endif
+            printf("ERROR ");
+        }
+    }
 }
 
 // Recover RAID 4 : striped on disks 0..(n-1), parity on disk n ----------------
