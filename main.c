@@ -9,7 +9,7 @@ Main program for CS537 - Project 3 - RAID
 #include "disk.h"
 #include "disk-array.h"
 
-#define DEBUG
+//#define DEBUG
 
 
 disk_array_t disk_array = NULL;
@@ -90,6 +90,7 @@ int main( int argc, char *argv[] )
     while (fgets(line, 1000, fd) != NULL) {
         parseLine(line);
         if (processCommand() != 0) {
+            printf("END\n");
             break;
         }
 #ifdef DEBUG
@@ -221,7 +222,7 @@ void parseLine(char *line) {
     } // end tokenizing
 
 #ifdef DEBUG
-        printCommand();
+    printCommand();
 #endif
 }
 
@@ -253,6 +254,7 @@ int processCommand() {
         case RECOVER: recoverCommand(); break;
         case END:     return 1;
         case FAIL:
+            printf("FAIL %d\n", cmd.disk);
             if (disk_array_fail_disk(disk_array, cmd.disk) == -1) {
                 fprintf(stderr, "Problem failing disk #%d\n", cmd.disk);
             }
@@ -280,19 +282,20 @@ void readRaid0() {
 
         char readBuffer[BLOCK_SIZE];
         if (disk_array_read(disk_array, disk, block, readBuffer) == -1) {
-#ifdef DEBUG
-            fprintf(stderr, "Error: Failed to read block %d from disk %d\n", block, disk);
-#endif
+            //fprintf(stderr, "Error: Failed to read block %d from disk %d\n", block, disk);
             // Print ERROR instead of first 4 btyes
             printf("ERROR ");
         } else {
-            // Print first 4 bytes from block that was read 
-            printf("%c%c%c%c ", readBuffer[0], readBuffer[1], readBuffer[2], readBuffer[3]);
+            if (readBuffer[0] == 0) {
+                printf("0 ");
+            } else {
+                // Print first 4 bytes from block that was read 
+                printf("%c%c%c%c ", readBuffer[0], readBuffer[1], readBuffer[2], readBuffer[3]);
+            }
         }
         
         ++lba;
     }
-    puts("");
 }
 
 // Read RAID 10 : striped and mirrored data ------------------------------------
@@ -315,7 +318,11 @@ void readRaid5() {
 void readCommand() {
     if (cmd.cmd != READ) return;
 
-    // READ LBA SIZE
+    // Echo command: READ LBA SIZE
+    if (verbose) {
+        printf("READ %d %d\n", cmd.lba, cmd.size);
+    }
+
     switch (args.level) {
         case 0:  readRaid0();  break;
         case 10: readRaid10(); break;
@@ -349,7 +356,7 @@ void writeRaid0() {
         }
 
         if (disk_array_write(disk_array, disk, block, writeBuffer) == -1) {
-            fprintf(stderr, "Error: Failed to write block %d to disk %d\n", block, disk);
+            //fprintf(stderr, "Error: Failed to write block %d to disk %d\n", block, disk);
         }
 
 #ifdef DEBUG
@@ -359,7 +366,6 @@ void writeRaid0() {
         
         ++lba;
     }
-    puts("");
 }
 
 // Write RAID 10 : striped and mirrored data -----------------------------------
@@ -382,7 +388,11 @@ void writeRaid5() {
 void writeCommand() {
     if (cmd.cmd != WRITE) return;
 
-    // WRITE LBA SIZE VALUE
+    // Echo command: WRITE LBA SIZE VALUE
+    if (verbose) {
+        printf("WRITE %d %d %c%c%c%c\n", cmd.lba, cmd.size, cmd.value[0], cmd.value[1], cmd.value[2], cmd.value[3]);
+    }
+
     switch (args.level) {
         case 0:  writeRaid0();  break;
         case 10: writeRaid10(); break;
@@ -400,8 +410,10 @@ void writeCommand() {
 
 // Recover RAID 0 : striped data -----------------------------------------------
 void recoverRaid0() {
-    // uhh... can't really recover a failed disk's data in raid 0
+#ifdef DEBUG
+    // Can't recover a failed disk's data in raid 0
     printf("Error: cannot recover data from disk #%d in RAID 0 configuration\n", cmd.disk);
+#endif
 }
 
 // Recover RAID 10 : striped and mirrored data ---------------------------------
@@ -423,6 +435,11 @@ void recoverRaid5() {
 // Recover command -------------------------------------------------------------
 void recoverCommand() {
     if (cmd.cmd != RECOVER) return;
+
+    // Echo command
+    if (verbose) {
+        printf("RECOVER %d\n", cmd.disk);
+    }
 
     // Zero out the specified disk in preparation for recovery
     if (disk_array_recover_disk(disk_array, cmd.disk) == -1) {
