@@ -88,9 +88,12 @@ int main( int argc, char *argv[] )
 #endif
     char line[1000];
     while (fgets(line, 1000, fd) != NULL) {
+        if (verbose) {
+            printf("%s", line);
+        }
+
         parseLine(line);
         if (processCommand() != 0) {
-            printf("END\n");
             break;
         }
 #ifdef DEBUG
@@ -254,7 +257,6 @@ int processCommand() {
         case RECOVER: recoverCommand(); break;
         case END:     return 1;
         case FAIL:
-            printf("FAIL %d\n", cmd.disk);
             if (disk_array_fail_disk(disk_array, cmd.disk) == -1) {
                 fprintf(stderr, "Problem failing disk #%d\n", cmd.disk);
             }
@@ -356,11 +358,7 @@ void readRaid5() {
 void readCommand() {
     if (cmd.cmd != READ) return;
 
-    // Echo command: READ LBA SIZE
-    if (verbose) {
-        printf("READ %d %d\n", cmd.lba, cmd.size);
-    }
-
+    // READ LBA SIZE
     switch (args.level) {
         case 0:  readRaid0();  break;
         case 10: readRaid10(); break;
@@ -381,6 +379,7 @@ void writeRaid0() {
     int lba = cmd.lba;
     int blocksToWrite = cmd.size;
     int blocksPerStripe = args.strip;
+    int writeFailed = 0;
 
     while (blocksToWrite-- > 0) {
         int disk  = (lba / blocksPerStripe) % args.disks;
@@ -395,6 +394,7 @@ void writeRaid0() {
 
         if (disk_array_write(disk_array, disk, block, writeBuffer) == -1) {
             //fprintf(stderr, "Error: Failed to write block %d to disk %d\n", block, disk);
+            writeFailed = 1;
         }
 
 #ifdef DEBUG
@@ -403,6 +403,10 @@ void writeRaid0() {
 #endif
         
         ++lba;
+    }
+
+    if (writeFailed) {
+        printf("ERROR ");
     }
 }
 
@@ -455,11 +459,7 @@ void writeRaid5() {
 void writeCommand() {
     if (cmd.cmd != WRITE) return;
 
-    // Echo command: WRITE LBA SIZE VALUE
-    if (verbose) {
-        printf("WRITE %d %d %c%c%c%c\n", cmd.lba, cmd.size, cmd.value[0], cmd.value[1], cmd.value[2], cmd.value[3]);
-    }
-
+    // WRITE LBA SIZE VALUE
     switch (args.level) {
         case 0:  writeRaid0();  break;
         case 10: writeRaid10(); break;
@@ -513,12 +513,12 @@ void recoverRaid10() {
 
 // Recover RAID 4 : striped on disks 0..(n-1), parity on disk n ----------------
 void recoverRaid4() {
-
+    // TODO
 }
 
 // Recover RAID 5 : striped, with parity on different disk for each stripe -----
 void recoverRaid5() {
-
+    // TODO
 }
 
 
@@ -526,16 +526,12 @@ void recoverRaid5() {
 void recoverCommand() {
     if (cmd.cmd != RECOVER) return;
 
-    // Echo command
-    if (verbose) {
-        printf("RECOVER %d\n", cmd.disk);
-    }
-
     // Zero out the specified disk in preparation for recovery
     if (disk_array_recover_disk(disk_array, cmd.disk) == -1) {
         fprintf(stderr, "Problem recovering disk #%d\n", cmd.disk);
     }
 
+    // RECOVER DISK
     switch (args.level) {
         case 0:  recoverRaid0();  break;
         case 10: recoverRaid10(); break;
