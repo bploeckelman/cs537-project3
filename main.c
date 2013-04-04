@@ -270,20 +270,20 @@ int processCommand() {
 
 // Read RAID 0 : striped data -------------------------------------------------
 void readRaid0() {
-    int lba   = cmd.lba;
-    int size  = cmd.size;
-    int strip = args.strip;
+    int lba = cmd.lba;
+    int blocksToRead = cmd.size;
+    int blocksPerStripe = args.strip;
 
-    while (size-- > 0) {
-        int disk  = (lba / strip) % args.disks;
-        int block = (lba % strip) + ((lba / strip) / args.disks) * strip;
+    while (blocksToRead-- > 0) {
+        int disk  = (lba / blocksPerStripe) % args.disks;
+        int block = (lba % blocksPerStripe) + ((lba / blocksPerStripe) / args.disks) * blocksPerStripe;
 
         char readBuffer[BLOCK_SIZE];
         if (disk_array_read(disk_array, disk, block, readBuffer) == -1) {
 #ifdef DEBUG
             fprintf(stderr, "Error: Failed to read block %d from disk %d\n", block, disk);
 #endif
-            // Note: apparently in this case we should just print ERROR instead of first 4 btyes
+            // Print ERROR instead of first 4 btyes
             printf("ERROR ");
         } else {
             // Print first 4 bytes from block that was read 
@@ -333,13 +333,13 @@ void readCommand() {
 
 // Write RAID 0 : striped data ------------------------------------------------
 void writeRaid0() {
-    int lba   = cmd.lba;
-    int size  = cmd.size;
-    int strip = args.strip;
+    int lba = cmd.lba;
+    int blocksToWrite = cmd.size;
+    int blocksPerStripe = args.strip;
 
-    while (size-- > 0) {
-        int disk  = (lba / strip) % args.disks;
-        int block = (lba % strip) + ((lba / strip) / args.disks) * strip;
+    while (blocksToWrite-- > 0) {
+        int disk  = (lba / blocksPerStripe) % args.disks;
+        int block = (lba % blocksPerStripe) + ((lba / blocksPerStripe) / args.disks) * blocksPerStripe;
 
         // Fill write buffer with the repeated 4 byte pattern from value
         char writeBuffer[BLOCK_SIZE];
