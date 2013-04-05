@@ -113,7 +113,7 @@ int main( int argc, char *argv[] )
 
 // Parse Command Line Arguments -----------------------------------------------
 // Note: this could be safer by using strol or bsd strtonum instead of atoi,
-// but that seems excessive for a class project,  we could also use 
+// but that seems excessive for a class project, we could also use
 // getopt_long_only() instead of this, but this gets the job done as well
 int parseCmdLine(int argc, char *argv[]) {
     // Validate number of arguments
@@ -126,11 +126,11 @@ int parseCmdLine(int argc, char *argv[]) {
 
     // Parse arguments
     for (int i = 1; i < argc; ++i) {
-             if (strcmp(argv[i], "-level")   == 0) args.level = atoi(argv[++i]);
-        else if (strcmp(argv[i], "-strip")   == 0) args.strip = atoi(argv[++i]);
-        else if (strcmp(argv[i], "-disks")   == 0) args.disks = atoi(argv[++i]);
-        else if (strcmp(argv[i], "-size")    == 0) args.size  = atoi(argv[++i]);
-        else if (strcmp(argv[i], "-trace")   == 0) args.trace = argv[++i];
+             if (strcmp(argv[i], "-level") == 0) args.level = atoi(argv[++i]);
+        else if (strcmp(argv[i], "-strip") == 0) args.strip = atoi(argv[++i]);
+        else if (strcmp(argv[i], "-disks") == 0) args.disks = atoi(argv[++i]);
+        else if (strcmp(argv[i], "-size") == 0) args.size = atoi(argv[++i]);
+        else if (strcmp(argv[i], "-trace") == 0) args.trace = argv[++i];
         else if (strcmp(argv[i], "-verbose") == 0) verbose = 1;
     }
 
@@ -142,9 +142,9 @@ int parseCmdLine(int argc, char *argv[]) {
         return -1;
     }
     if ((args.disks < 1)
-     || ((args.level == 10) && (args.disks % 2 != 0))  // Raid 10 requires even # disks
-     || ((args.level == 4)  && (args.disks < 3))       // Raid 4 requires more than 2 disks
-     || ((args.level == 5)  && (args.disks < 3)) ) {   // Raid 5 requires more than 2 disks
+     || ((args.level == 10) && (args.disks % 2 != 0)) // Raid 10 requires even # disks
+     || ((args.level == 4) && (args.disks < 3)) // Raid 4 requires more than 2 disks
+     || ((args.level == 5) && (args.disks < 3)) ) { // Raid 5 requires more than 2 disks
         fprintf(stderr, "Invalid number of disks: RAID 10 requires an even number of disks, RAID 4 and 5 require > 2 disk\n");
         return -1;
     }
@@ -154,7 +154,7 @@ int parseCmdLine(int argc, char *argv[]) {
 
 #ifdef DEBUG
     // Print parsed command line aguments
-    printf("args: \n  level = %d\n  strip = %d\n  disks = %d\n  size = %d\n  trace = %s\n  verbose = %d\n",
+    printf("args: \n level = %d\n strip = %d\n disks = %d\n size = %d\n trace = %s\n verbose = %d\n",
         args.level, args.strip, args.disks, args.size, args.trace, verbose);
 #endif
 
@@ -172,11 +172,11 @@ void parseLine(char *line) {
 
     // Determine actual command
     char *tok = strtok(line, " ");
-         if (strcmp(tok, "READ")    == 0) cmd.cmd = READ;
-    else if (strcmp(tok, "WRITE")   == 0) cmd.cmd = WRITE;
-    else if (strcmp(tok, "FAIL")    == 0) cmd.cmd = FAIL;
+         if (strcmp(tok, "READ") == 0) cmd.cmd = READ;
+    else if (strcmp(tok, "WRITE") == 0) cmd.cmd = WRITE;
+    else if (strcmp(tok, "FAIL") == 0) cmd.cmd = FAIL;
     else if (strcmp(tok, "RECOVER") == 0) cmd.cmd = RECOVER;
-    else if (strcmp(tok, "END")     == 0) {
+    else if (strcmp(tok, "END") == 0) {
         cmd.cmd = END;
         return;
     } else {
@@ -193,7 +193,7 @@ void parseLine(char *line) {
         // READ LBA SIZE
         if (cmd.cmd == READ) {
             switch (tokNum) {
-                case 1: cmd.lba  = atoi(tok); break;
+                case 1: cmd.lba = atoi(tok); break;
                 case 2: cmd.size = atoi(tok); break;
             }
             if (tokNum == 2) break;
@@ -201,8 +201,8 @@ void parseLine(char *line) {
         // WRITE LBA SIZE VALUE
         else if (cmd.cmd == WRITE) {
             switch (tokNum) {
-                case 1: cmd.lba   = atoi(tok); break;
-                case 2: cmd.size  = atoi(tok); break;
+                case 1: cmd.lba = atoi(tok); break;
+                case 2: cmd.size = atoi(tok); break;
                 case 3: memcpy(cmd.value, tok, 4); break;
             }
             if (tokNum == 3) break;
@@ -243,7 +243,7 @@ void printCommand() {
         default:      cmdString = "Unknown"; break;
     }
 
-    printf("Command:\n  cmd = %s\n  lba = %d\n  size = %d\n  value = %c%c%c%c\n  disk = %d\n",
+    printf("Command:\n cmd = %s\n lba = %d\n size = %d\n value = %c%c%c%c\n disk = %d\n",
         cmdString, cmd.lba, cmd.size, cmd.value[0], cmd.value[1], cmd.value[2], cmd.value[3], cmd.disk);
 }
 
@@ -279,7 +279,7 @@ void readRaid0() {
     int blocksPerStripe = args.strip;
 
     while (blocksToRead-- > 0) {
-        int disk  = (lba / blocksPerStripe) % args.disks;
+        int disk = (lba / blocksPerStripe) % args.disks;
         int block = (lba % blocksPerStripe) + ((lba / blocksPerStripe) / args.disks) * blocksPerStripe;
 
         char readBuffer[BLOCK_SIZE];
@@ -291,7 +291,7 @@ void readRaid0() {
             if (readBuffer[0] == 0) {
                 printf("0 ");
             } else {
-                // Print first 4 bytes from block that was read 
+                // Print first 4 bytes from block that was read
                 printf("%c%c%c%c ", readBuffer[0], readBuffer[1], readBuffer[2], readBuffer[3]);
             }
         }
@@ -307,7 +307,7 @@ void readRaid10() {
     int blocksPerStripe = args.strip;
 
     while (blocksToRead-- > 0) {
-        int disk  = ((lba / blocksPerStripe) * 2) % args.disks;
+        int disk = ((lba / blocksPerStripe) * 2) % args.disks;
         int block = (lba % blocksPerStripe) + ((lba / blocksPerStripe) / (args.disks / 2)) * blocksPerStripe;
         int mirror = disk + 1;
 
@@ -317,7 +317,7 @@ void readRaid10() {
         if (disk_array_read(disk_array, disk, block, readBuffer) == -1) {
             //fprintf(stderr, "Error: Failed to read block %d from disk %d\n", block, disk);
 
-            // Try  to read from mirror
+            // Try to read from mirror
             if (disk_array_read(disk_array, mirror, block, readBuffer) == -1) {
                 //fprintf(stderr, "Error: Failed to read block %d from disk %d\n", block, mirror);
             } else {
@@ -345,12 +345,128 @@ void readRaid10() {
 
 // Read RAID 4 : striped on disks 0..(n-1), parity on disk n -------------------
 void readRaid4() {
-    // TODO
+    int lba = cmd.lba;
+    int blocksToRead = cmd.size;
+    int blocksPerStrip = args.strip;
+    int stripsPerStripe = args.disks - 1;
+    
+    while (blocksToRead-- > 0) {
+        int stripe = (lba / blocksPerStrip) / stripsPerStripe;
+        int parityDisk = args.disks-1;
+        int disk = (lba / blocksPerStrip) % stripsPerStripe;
+        
+        if (disk >= parityDisk) {
+            disk++;
+        }
+        
+        //TODO: this could be a tricky little bugger here
+        int block = (lba % blocksPerStrip) + stripe * blocksPerStrip;
+        
+        char readBuffer[BLOCK_SIZE];
+        if (disk_array_read(disk_array, disk, block, readBuffer) == -1) {
+            //attempted data recovery
+            //recover data by taking logical XOR of all remaining disks in stripe
+            char readBuffer[BLOCK_SIZE];
+            int recoverDisk = 0;
+            char recoverySuccess = 1;
+
+            for (recoverDisk = 0; recoverDisk < args.disks; recoverDisk++) {
+                if (recoverDisk != disk) {
+                    char recoverBuffer[BLOCK_SIZE];
+                    if (disk_array_read(disk_array, recoverDisk, block, recoverBuffer) == -1) {
+                        printf("ERROR ");
+                        recoverySuccess = -1;
+                        break;
+                    }
+
+                    for (int i = 0; i < BLOCK_SIZE; i++) {
+                        readBuffer[i] = readBuffer[i] ^ recoverBuffer[i];
+                    }
+                }
+            }
+            
+            if (recoverySuccess > 0) {
+                if (readBuffer[0] == 0) {
+                    printf("0 ");
+                } else {
+                    //print first 4 bytes from block that was read
+                    printf("%c%c%c%c ", readBuffer[0], readBuffer[1], readBuffer[2], readBuffer[3]);
+                }
+            }
+        } else {
+            if (readBuffer[0] == 0) {
+                printf("0 ");
+            } else {
+                // Print first 4 bytes from block that was read
+                printf("%c%c%c%c ", readBuffer[0], readBuffer[1], readBuffer[2], readBuffer[3]);
+            }
+        }
+        
+        ++lba;
+    }
 }
 
 // Read RAID 5 : striped, with parity on different disk for each stripe --------
 void readRaid5() {
-    // TODO
+    int lba = cmd.lba;
+    int blocksToRead = cmd.size;
+    int blocksPerStrip = args.strip;
+    int stripsPerStripe = args.disks - 1;
+    
+    while (blocksToRead-- > 0) {
+        int stripe = (lba / blocksPerStrip) / stripsPerStripe;
+        int parityDisk = stripe % args.disks;
+        int disk = (lba / blocksPerStrip) % stripsPerStripe;
+        
+        if (disk >= parityDisk) {
+            disk++;
+        }
+        
+        //TODO: this could be a tricky little bugger here
+        int block = (lba % blocksPerStrip) + stripe * blocksPerStrip;
+        
+        char readBuffer[BLOCK_SIZE];
+        if (disk_array_read(disk_array, disk, block, readBuffer) == -1) {
+            //attempted data recovery
+            //recover data by taking logical XOR of all remaining disks in stripe
+            char readBuffer[BLOCK_SIZE];
+            int recoverDisk = 0;
+            char recoverySuccess = 1;
+
+            for (recoverDisk = 0; recoverDisk < args.disks; recoverDisk++) {
+                if (recoverDisk != disk) {
+                    char recoverBuffer[BLOCK_SIZE];
+                    if (disk_array_read(disk_array, recoverDisk, block, recoverBuffer) == -1) {
+                        printf("ERROR ");
+                        recoverySuccess = -1;
+                        break;
+                    }
+                    int i;
+                    for (i = 0; i < BLOCK_SIZE; i++) {
+                        readBuffer[i] = readBuffer[i] ^ recoverBuffer[i];
+                    }
+                }
+            }
+            
+            if (recoverySuccess > 0) {
+                if (readBuffer[0] == 0) {
+                    printf("0 ");
+                } else {
+                    //print first 4 bytes from block that was read
+                    printf("%c%c%c%c ", readBuffer[0], readBuffer[1], readBuffer[2], readBuffer[3]);
+                }
+            }
+        } else {
+            if (readBuffer[0] == 0) {
+                printf("0 ");
+            } else {
+                // Print first 4 bytes from block that was read
+                printf("%c%c%c%c ", readBuffer[0], readBuffer[1], readBuffer[2], readBuffer[3]);
+            }
+        }
+        
+        ++lba;
+    }
 }
 
 
@@ -382,7 +498,7 @@ void writeRaid0() {
     int writeFailed = 0;
 
     while (blocksToWrite-- > 0) {
-        int disk  = (lba / blocksPerStripe) % args.disks;
+        int disk = (lba / blocksPerStripe) % args.disks;
         int block = (lba % blocksPerStripe) + ((lba / blocksPerStripe) / args.disks) * blocksPerStripe;
 
         // Fill write buffer with the repeated 4 byte pattern from value
@@ -398,7 +514,7 @@ void writeRaid0() {
         }
 
 #ifdef DEBUG
-        // Print first 4 bytes from block that was written 
+        // Print first 4 bytes from block that was written
         printf("%c%c%c%c ", writeBuffer[0], writeBuffer[1], writeBuffer[2], writeBuffer[3]);
 #endif
         
@@ -417,7 +533,7 @@ void writeRaid10() {
     int blocksPerStripe = args.strip;
 
     while (blocksToWrite-- > 0) {
-        int disk  = ((lba / blocksPerStripe) * 2) % args.disks;
+        int disk = ((lba / blocksPerStripe) * 2) % args.disks;
         int block = (lba % blocksPerStripe) + ((lba / blocksPerStripe) / (args.disks / 2)) * blocksPerStripe;
         int mirror = disk + 1;
 
@@ -446,12 +562,138 @@ void writeRaid10() {
 
 // Write RAID 4 : striped on disks 0..(n-1), parity on disk n ------------------
 void writeRaid4() {
-    // TODO
+    int lba = cmd.lba;
+    int blocksToWrite = cmd.size;
+    int blocksPerStrip = args.strip;
+    int stripsPerStripe = args.disks - 1;
+    int writeFailed = 0;
+
+    while (blocksToWrite-- > 0) {
+        int stripe = (lba / blocksPerStrip) / stripsPerStripe;
+        int parityDisk = args.disks-1;
+        int disk = (lba / blocksPerStrip) % stripsPerStripe;
+        
+        if (disk >= parityDisk) {
+            disk++;
+        }
+        
+        //TODO: this could be a tricky little bugger here
+        int block = (lba % blocksPerStrip) + stripe * blocksPerStrip;
+        
+        // Fill write buffer with the repeated 4 byte pattern from value
+        char writeBuffer[BLOCK_SIZE];
+        memset(writeBuffer, 0, BLOCK_SIZE);
+        for (int i = 0; i < BLOCK_SIZE; ++i) {
+            writeBuffer[i] = cmd.value[i % 4];
+        }
+		
+		char oldBuffer[BLOCK_SIZE];
+		char oldParity[BLOCK_SIZE];
+
+		//read old data
+		if (disk_array_read(disk_array, disk, block, oldBuffer) == -1) {
+		    writeFailed = 1;
+		}
+		
+		//read old parity
+		if (disk_array_read(disk_array, parityDisk, block, oldParity) == -1) {
+		    writeFailed = 1;
+		}
+		
+		//compare bits in old block and new block, update parity
+		for (int i = 0; i < BLOCK_SIZE; i++) {
+		    oldBuffer[i] = oldBuffer[i] ^ writeBuffer[i];
+			oldParity[i] = oldBuffer[i] ^ oldParity[i];
+		}
+		
+        if (disk_array_write(disk_array, disk, block, writeBuffer) == -1) {
+            //fprintf(stderr, "Error: Failed to write block %d to disk %d\n", block, disk);
+            writeFailed = 1;
+        }
+		
+		if (disk_array_write(disk_array, parityDisk, block, oldParity) == -1) {
+		    writeFailed = 1;
+		}
+		
+#ifdef DEBUG
+        // Print first 4 bytes from block that was written
+        printf("%c%c%c%c ", writeBuffer[0], writeBuffer[1], writeBuffer[2], writeBuffer[3]);
+#endif
+        
+        ++lba;
+    }
+
+    if (writeFailed) {
+        printf("ERROR ");
+    }
 }
 
 // Write RAID 5 : striped, with parity on different disk for each stripe -------
 void writeRaid5() {
-    // TODO
+    int lba = cmd.lba;
+    int blocksToWrite = cmd.size;
+    int blocksPerStrip = args.strip;
+    int stripsPerStripe = args.disks - 1;
+    int writeFailed = 0;
+
+    while (blocksToWrite-- > 0) {
+        int stripe = (lba / blocksPerStrip) / stripsPerStripe;
+        int parityDisk = stripe % args.disks;
+        int disk = (lba / blocksPerStrip) % stripsPerStripe;
+        
+        if (disk >= parityDisk) {
+            disk++;
+        }
+        
+        //TODO: this could be a tricky little bugger here
+        int block = (lba % blocksPerStrip) + stripe * blocksPerStrip;
+        
+        // Fill write buffer with the repeated 4 byte pattern from value
+        char writeBuffer[BLOCK_SIZE];
+        memset(writeBuffer, 0, BLOCK_SIZE);
+        for (int i = 0; i < BLOCK_SIZE; ++i) {
+            writeBuffer[i] = cmd.value[i % 4];
+        }
+		
+		char oldBuffer[BLOCK_SIZE];
+		char oldParity[BLOCK_SIZE];
+
+		//read old data
+		if (disk_array_read(disk_array, disk, block, oldBuffer) == -1) {
+		    writeFailed = 1;
+		}
+		
+		//read old parity
+		if (disk_array_read(disk_array, parityDisk, block, oldParity) == -1) {
+		    writeFailed = 1;
+		}
+		
+		//compare bits in old block and new block, update parity
+		for (int i = 0; i < BLOCK_SIZE; i++) {
+		    oldBuffer[i] = oldBuffer[i] ^ writeBuffer[i];
+			oldParity[i] = oldBuffer[i] ^ oldParity[i];
+		}
+		
+        if (disk_array_write(disk_array, disk, block, writeBuffer) == -1) {
+            //fprintf(stderr, "Error: Failed to write block %d to disk %d\n", block, disk);
+            writeFailed = 1;
+        }
+		
+		if (disk_array_write(disk_array, parityDisk, block, oldParity) == -1) {
+		    writeFailed = 1;
+		}
+
+#ifdef DEBUG
+        // Print first 4 bytes from block that was written
+        printf("%c%c%c%c ", writeBuffer[0], writeBuffer[1], writeBuffer[2], writeBuffer[3]);
+#endif
+        
+        ++lba;
+    }
+
+    if (writeFailed) {
+        printf("ERROR ");
+    }
 }
 
 
@@ -513,12 +755,64 @@ void recoverRaid10() {
 
 // Recover RAID 4 : striped on disks 0..(n-1), parity on disk n ----------------
 void recoverRaid4() {
-    // TODO
+    int disk = cmd.disk;
+	char buffer[BLOCK_SIZE];
+
+	for (int i = 0; i < args.size; i++) {
+        for (int recoverDisk = 0; recoverDisk < args.disks; recoverDisk++) {
+            if (recoverDisk != disk) {
+                char recoverBuffer[BLOCK_SIZE];
+                if (disk_array_read(disk_array, recoverDisk, i, recoverBuffer) == -1) {
+#ifdef DEBUG
+                    fprintf(stderr, "Error: Failed to read block %d from disk %d to recover disk %d\n", block, mirror, cmd.disk);
+#endif
+                    printf("ERROR ");
+                }
+
+                for (int j = 0; j < BLOCK_SIZE; j++) {
+                    buffer[j] = buffer[j] ^ recoverBuffer[j];
+                }
+            }
+        }
+
+        if (disk_array_write(disk_array, disk, i, buffer) == -1) {
+#ifdef DEBUG
+            fprintf(stderr, "Error: Failed to write block %d to disk %d from recovery disk %d\n", block, cmd.disk, mirror);
+#endif
+            printf("ERROR ");
+        }
+    } 
 }
 
 // Recover RAID 5 : striped, with parity on different disk for each stripe -----
 void recoverRaid5() {
-    // TODO
+    int disk = cmd.disk;
+	char buffer[BLOCK_SIZE];
+
+	for (int i = 0; i < args.size; i++) {
+        for (int recoverDisk = 0; recoverDisk < args.disks; recoverDisk++) {
+            if (recoverDisk != disk) {
+                char recoverBuffer[BLOCK_SIZE];
+                if (disk_array_read(disk_array, recoverDisk, i, recoverBuffer) == -1) {
+#ifdef DEBUG
+                    fprintf(stderr, "Error: Failed to read block %d from disk %d to recover disk %d\n", block, mirror, cmd.disk);
+#endif
+                    printf("ERROR ");
+                }
+
+                for (int j = 0; j < BLOCK_SIZE; j++) {
+                    buffer[j] = buffer[j] ^ recoverBuffer[j];
+                }
+            }
+        }
+
+        if (disk_array_write(disk_array, disk, i, buffer) == -1) {
+#ifdef DEBUG
+            fprintf(stderr, "Error: Failed to write block %d to disk %d from recovery disk %d\n", block, cmd.disk, mirror);
+#endif
+            printf("ERROR ");
+        }
+    } 
 }
 
 
